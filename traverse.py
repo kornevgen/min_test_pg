@@ -133,8 +133,8 @@ template = [
 	{"l1": "hit", "addr" : "a1"},
 	{"l1" : "hit", "addr" : "a2"},
 	{"l1" : "hit", "addr" : "a3"},
-	{"l1" : "hit", "addr" : "a4" },
-	{"l1" : "miss", "addr" : "c" }
+	{"l1" : "hit", "addr" : "a4" }
+	, {"l1" : "miss", "addr" : "c" }
 ]
 
 # lru element is the last element of this seq
@@ -147,14 +147,18 @@ alldiffs_l1 = [ [initial_l1[i], initial_l1[j]]
 
 equiv_pairs = [[op["addr"], op["addr"]] for op in template] 
 
-equals = equiv_pairs
-# equals = equiv_pairs + [["a1", "c"]]
+# equals = equiv_pairs
+
+equals = equiv_pairs + [["a1", "c"]]
+
 # not_equals = alldiffs_l1 + [["a1", "a2"], ["a2", "a3"], ["a3", "a4"]]
 # not_equals = alldiffs_l1 + [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
 #				["a2", "a3"], ["a3", "a4"]]
 
 not_equals = alldiffs_l1 + [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
-				["a2", "a3"], ["a2", "a4"], ["a3", "a4"]]
+			["a2", "a3"], ["a2", "a4"], ["a3", "a4"]]
+
+# not_equals = alldiffs_l1 + [["a1", "a2"]]
 
 if not traverse(template, initial_l1, equals, not_equals, [] ) :
 	print("template is unsatisfiable")

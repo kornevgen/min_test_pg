@@ -53,8 +53,6 @@ def traverse(program, l1, equals, not_equals):
 
 
 	if len(program) == 0 :
-		print("EQUALS =", equals)
-		print("NOT_EQUALS =", not_equals)
 		print_model(equals, not_equals)
 		return True
 
@@ -121,8 +119,6 @@ def exists_path(start, finish, edges) :
 def print_model(equals, not_equals) :
 	elems_classes = get_eqclasses(equals)
 	# elems_classes is a list of sets
-
-	print("EQCLASSES =", elems_classes)
 
 	if len(elems_classes) == 0 :
 		print("elems_classes is empty :( nothing to print")
