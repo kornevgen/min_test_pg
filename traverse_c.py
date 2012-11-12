@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+leafs = 0
+
 def traverse_c(program, l1, equals, not_equals) :
 	for l in l1 :
 		assert isinstance(l, int)
@@ -50,6 +52,8 @@ def traverse_c(program, l1, equals, not_equals) :
 
 
 def traverse(program, l1, equals, not_equals):
+	global leafs
+	
 	assert len(l1) == 4
 
 	for i in range(len(l1)) :
@@ -83,12 +87,14 @@ def traverse(program, l1, equals, not_equals):
 					[addr] + l1[:-1],
 					equals + eq,
 					neq)
+			leafs += 1
 			return False
 
 		if program[0]["l1"] == "hit" :
 			ind = index(addr, l1, equals)
 			if ind != -1 :
-				return traverse(program[1:], [addr] + l1[:ind] + l1[ind+1:], equals, not_equals)
+				if traverse(program[1:], [addr] + l1[:ind] + l1[ind+1:], equals, not_equals) :
+					return True
 			else :
 				for i in range(len(l1)) :
 					e = l1[i]
@@ -99,6 +105,8 @@ def traverse(program, l1, equals, not_equals):
 							equals + [[addr, e]],
 							not_equals) :
 							return True
+			leafs += 1
+			return False
 
 		if program[0]["l1"] == "any" :
 			program[0]["l1"] = "miss"
@@ -108,6 +116,8 @@ def traverse(program, l1, equals, not_equals):
 			if traverse(program, l1, equals, not_equals) :
 				return True
 			program[0]["l1"] = "any"
+
+			leafs += 1
 			return False
 				
 	else :
@@ -250,4 +260,5 @@ not_equals = [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
 
 if not traverse_c(template, initial_l1, equals, not_equals ) :
 	print("template is unsatisfiable")
+	print("Statistics: leafs =", leafs)
 
