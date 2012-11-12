@@ -72,7 +72,7 @@ def traverse(program, l1, equals, not_equals):
 			neq = not_equals + [[addr, x] for x in l1]
 			eq = [[program[0]["remvd"],l1[-1]]] if "remvd" in program[0] else []
 			
-			if len(program) == 1 :
+			if False and len(program) == 1 :
 				print("TRY SAT:")
 				print("EQ = ", equals + eq)
 				print("NotEQ = ", neq)
@@ -86,15 +86,19 @@ def traverse(program, l1, equals, not_equals):
 			return False
 
 		if program[0]["l1"] == "hit" :
-			for i in range(len(l1)) :
-				e = l1[i]
-				if sat(equals + [[addr, e]], not_equals) :
-					if traverse(
-						program[1:],
-						[e] + l1[:i] + l1[i+1:], 
-						equals + [[addr, e]],
-						not_equals) :
-						return True
+			ind = index(addr, l1, equals)
+			if ind != -1 :
+				return traverse(program[1:], [addr] + l1[:ind] + l1[ind+1:], equals, not_equals)
+			else :
+				for i in range(len(l1)) :
+					e = l1[i]
+					if sat(equals + [[addr, e]], not_equals) :
+						if traverse(
+							program[1:],
+							[e] + l1[:i] + l1[i+1:], 
+							equals + [[addr, e]],
+							not_equals) :
+							return True
 
 		if program[0]["l1"] == "any" :
 			program[0]["l1"] = "miss"
@@ -139,6 +143,15 @@ def exists_path(start, finish, edges) :
 			return True
 	return False	
 
+
+def index(addr, l1, eqs) :
+	for i in range(len(l1)) :
+		if eq(addr, l1[i], eqs) :
+			return i
+	return -1
+
+def eq(x, y, eqs) :
+	return exists_path(x, y, eqs)
 
 def print_model(equals, not_equals) :
 	elems_classes = get_eqclasses(equals)
