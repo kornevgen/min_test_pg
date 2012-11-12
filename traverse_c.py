@@ -9,7 +9,7 @@ def traverse_c(program, l1, equals, not_equals) :
 			if j > i :
 				assert l1[j] != l1[i]
 	
-	for i in range(len(l1)) :
+	for i in range(len(l1)+1) :
 		l0 = []
 		for j in range(i) :
 			l0 += ["_" + str(j)]
@@ -29,9 +29,15 @@ def traverse_c(program, l1, equals, not_equals) :
 		for l in l0 :
 			equals_l0 += [[l, l]]
 
+		nums = [j for j in 
+				l0 +
+				[i["addr"] for i in program if "addr" in i] +
+				[i["remvd"] for i in program if "remvd" in i]
+		if isinstance(j, int)]
+
 		not_equals_nums = []
-		for j in [j for j in l0 if isinstance(j, int)] :
-			for k in [i["addr"] for i in program if isinstance(i["addr"], int)] :
+		for j in nums :
+			for k in nums :
 				if k != j :
 					not_equals_nums += [[k, j]]
 
@@ -61,11 +67,12 @@ def traverse(program, l1, equals, not_equals):
 	if "l1" in program[0] :
 		if program[0]["l1"] == "miss" :
 			neq = not_equals + [[addr, x] for x in l1]
+			eq = [[program[0]["remvd"],l1[-1]]] if "remvd" in program[0] else []
 			if sat(equals, neq) :
 				return traverse(
 					program[1:],
 					[addr] + l1[:-1],
-					equals,
+					equals + eq,
 					neq)
 			return False
 
@@ -173,13 +180,13 @@ def get_eqclasses(equals) :
 #################################################
 
 template = [
-	{"l1" : "miss", "addr": "x"},
+	{"l1" : "miss", "addr": "x", "remvd": "y" }, # 5 },
 	{"l1" : "hit", "addr" : 65},
 	{"l1": "hit", "addr" : "a1"},
 	{"l1" : "hit", "addr" : "a2"},
 	{"l1" : "hit", "addr" : "a3"},
 	{"l1" : "hit", "addr" : "a4" }
-	, {"l1" : "miss", "addr" : "c" }
+	, {"l1" : "miss", "addr" : "y" } 
 ]
 
 # lru element is the last element of this seq
