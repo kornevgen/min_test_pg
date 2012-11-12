@@ -62,12 +62,21 @@ def traverse(program, l1, equals, not_equals):
 		print_model(equals, not_equals)
 		return True
 
+	print("left: ", len(program), "program elements")
+	print("cache:", l1)
+
 	addr = program[0]["addr"];
 
 	if "l1" in program[0] :
 		if program[0]["l1"] == "miss" :
 			neq = not_equals + [[addr, x] for x in l1]
 			eq = [[program[0]["remvd"],l1[-1]]] if "remvd" in program[0] else []
+			
+			if len(program) == 1 :
+				print("TRY SAT:")
+				print("EQ = ", equals + eq)
+				print("NotEQ = ", neq)
+			
 			if sat(equals, neq) :
 				return traverse(
 					program[1:],
@@ -87,6 +96,14 @@ def traverse(program, l1, equals, not_equals):
 						not_equals) :
 						return True
 
+		if program[0]["l1"] == "any" :
+			program[0]["l1"] = "miss"
+			if traverse(program, l1, equals, not_equals) :
+				return True
+			program[0]["l1"] = "hit"
+			if traverse(program, l1, equals, not_equals) :
+				return True
+			program[0]["l1"] = "any"
 			return False
 				
 	else :
@@ -179,7 +196,7 @@ def get_eqclasses(equals) :
 
 #################################################
 
-template = [
+template0 = [
 	{"l1" : "miss", "addr": "x", "remvd": "y" }, # 5 },
 	{"l1" : "hit", "addr" : 65},
 	{"l1": "hit", "addr" : "a1"},
@@ -187,6 +204,18 @@ template = [
 	{"l1" : "hit", "addr" : "a3"},
 	{"l1" : "hit", "addr" : "a4" }
 	, {"l1" : "miss", "addr" : "y" } 
+]
+
+template = [
+	{"l1" : "miss", "addr" : "a1", "remvd" : "x" },
+	{"l1" : "any", "addr" : "a2" },
+	{"l1" : "any", "addr" : "a3" },
+	{"l1" : "any", "addr" : "a2" },
+	{"l1" : "any", "addr" : "a3" },
+	{"l1" : "any", "addr" : "a2" },
+	{"l1" : "any", "addr" : "a3" },
+	{"l1" : "miss", "addr" : "a4", "remvd" : "x" },
+	{"l1" : "miss", "addr" : "a5", "remvd" : "x1"  }
 ]
 
 # lru element is the last element of this seq
