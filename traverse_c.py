@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-leafs = 0
-
 def traverse_c(program, l1, equals, not_equals) :
 	for l in l1 :
 		assert isinstance(l, int)
@@ -10,7 +8,7 @@ def traverse_c(program, l1, equals, not_equals) :
 		for j in range(len(l1)) :
 			if j > i :
 				assert l1[j] != l1[i]
-	
+
 	for i in range(len(l1)+1) :
 		l0 = []
 		for j in range(i) :
@@ -43,17 +41,18 @@ def traverse_c(program, l1, equals, not_equals) :
 				if k != j :
 					not_equals_nums += [[k, j]]
 
-			
-
-		if traverse(program, l0, equals + equals_l0, not_equals + not_equals_l0 + not_equals_nums) :
-			return True
+		# try heuristics
+		eq = equals + equals_l0
+		neq = not_equals + not_equals_l0 + not_equals_nums
+		remvd_neqs(program, l1, eq, neq)  # equals and not_equals may be increased
+		if sat(eq, neq) :
+			if traverse(program, l0, eq, neq) :
+				return True
 	
 	return False
 
 
 def traverse(program, l1, equals, not_equals):
-	global leafs
-	
 	assert len(l1) == 4
 
 	for i in range(len(l1)) :
@@ -66,6 +65,7 @@ def traverse(program, l1, equals, not_equals):
 		print_model(equals, not_equals)
 		return True
 
+	print(" ")
 	print("left: ", len(program), "program elements")
 	print("cache:", l1)
 
@@ -73,22 +73,24 @@ def traverse(program, l1, equals, not_equals):
 
 	if "l1" in program[0] :
 		if program[0]["l1"] == "miss" :
+			print("try miss(", addr, ")")
 			neq = not_equals + [[addr, x] for x in l1]
 			eq = [[program[0]["remvd"],l1[-1]]] if "remvd" in program[0] else []
 			
+			if "remvd" in program[0] :
+				print("remvd: ", program[0]["remvd"], "=", l1[-1])
+
 			if False and len(program) == 1 :
 				print("TRY SAT:")
 				print("EQ = ", equals + eq)
 				print("NotEQ = ", neq)
 			
-			if sat(equals, neq) :
+			if sat(equals+eq, neq) :
 				return traverse(
 					program[1:],
 					[addr] + l1[:-1],
 					equals + eq,
 					neq)
-			leafs += 1
-			return False
 
 		if program[0]["l1"] == "hit" :
 			ind = index(addr, l1, equals)
@@ -98,6 +100,7 @@ def traverse(program, l1, equals, not_equals):
 			else :
 				for i in range(len(l1)) :
 					e = l1[i]
+					print("try hit: ", addr, "=", e)
 					if sat(equals + [[addr, e]], not_equals) :
 						if traverse(
 							program[1:],
@@ -105,8 +108,8 @@ def traverse(program, l1, equals, not_equals):
 							equals + [[addr, e]],
 							not_equals) :
 							return True
-			leafs += 1
-			return False
+					else :
+						print("unsat; try next or backtrack")
 
 		if program[0]["l1"] == "any" :
 			program[0]["l1"] = "miss"
@@ -117,8 +120,8 @@ def traverse(program, l1, equals, not_equals):
 				return True
 			program[0]["l1"] = "any"
 
-			leafs += 1
-			return False
+		print("backtrack")	
+		return False
 				
 	else :
 		return traverse(program[1:], l1, equals, not_equals)
@@ -216,6 +219,40 @@ def get_eqclasses(equals) :
 					or p[1] in eqclass ]
 	return [eqclass] + get_eqclasses([p for p in equals if p not in newpairs])
 
+#################################################
+
+def remvd_neqs(program, l1, equals, not_equals) :
+	w = len(l1)
+
+	for i in range(len(program)) :
+		if "remvd" in program[i] :
+			rmvd_adr = program[i]["remvd"]
+			in_l1 = []
+			remvd_l1 = []
+			j = i-1
+			while j >= 0 and len(in_l1) < w-1 :
+				if "l1" in program[j] :
+					if not is_known(program[j]["addr"], in_l1, equals) :
+						in_l1 += [program[j]["addr"]]
+					if "remvd" in program[j] :
+						remvd_l1 += [program[j]["remvd"]]
+				j = j - 1
+
+			if len(in_l1) < w-1:
+				k = 0
+				while len(in_l1) < w - 1 :
+					if not is_known(l1[k], in_l1, equals) :
+						in_l1 += [l1[k]]
+					k += 1
+
+			not_equals += [[rmvd_adr, a] for a in in_l1 + remvd_l1]
+													
+
+def is_known(x, l, equals) :
+	for i in l :
+		if exists_path(x, i, equals) :
+			return True
+	return False
 
 #################################################
 
@@ -260,5 +297,4 @@ not_equals = [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
 
 if not traverse_c(template, initial_l1, equals, not_equals ) :
 	print("template is unsatisfiable")
-	print("Statistics: leafs =", leafs)
-
+	
