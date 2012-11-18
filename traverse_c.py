@@ -8,7 +8,31 @@ def traverse_c(program, l1, equals, not_equals) :
 		for j in range(len(l1)) :
 			if j > i :
 				assert l1[j] != l1[i]
+	# try to solve
+	l0 = ["_" + str(j) for j in range(len(l1))]
+        
+	not_equals_l0 = [[l0[k], l0[j]] for j in range(len(l1))
+                                         for k in range(j+1, len(l1))]
+                
+	equals_l0 = [[l, l] for l in l0]
 
+	nums = [j for j in 
+                        l0 +
+                        [i["addr"] for i in program if "addr" in i] +
+                        [i["remvd"] for i in program if "remvd" in i]
+		if isinstance(j, int)]
+                
+	not_equals_nums = [[nums[k], nums[j]] for k in range(len(nums))
+                                           for j in range(k+1, len(nums))]
+                
+	# try heuristics
+	eq = equals + equals_l0
+	neq = not_equals + not_equals_l0 + not_equals_nums
+	remvd_neqs(program, l1, eq, neq)  # equals and not_equals may be increased
+	if not sat(eq, neq) or not traverse(program, l0, eq, neq) :
+		return False
+
+        # minimize solution
 	for i in range(len(l1)+1) :
 		l0 = []
 		for j in range(i) :
@@ -19,7 +43,7 @@ def traverse_c(program, l1, equals, not_equals) :
 		assert len(l0) == len(l1)
 
 		not_equals_l0 = []
-
+                
 		for j in range(len(l1)) :
 			for k in range(len(l1)) :
 				if k > j :
@@ -28,19 +52,19 @@ def traverse_c(program, l1, equals, not_equals) :
 		equals_l0 = []
 		for l in l0 :
 			equals_l0 += [[l, l]]
-
+                
 		nums = [j for j in 
 				l0 +
 				[i["addr"] for i in program if "addr" in i] +
 				[i["remvd"] for i in program if "remvd" in i]
 		if isinstance(j, int)]
-
+                
 		not_equals_nums = []
 		for j in nums :
 			for k in nums :
 				if k != j :
 					not_equals_nums += [[k, j]]
-
+                
 		# try heuristics
 		eq = equals + equals_l0
 		neq = not_equals + not_equals_l0 + not_equals_nums
@@ -266,7 +290,7 @@ template0 = [
 	, {"l1" : "miss", "addr" : "y" } 
 ]
 
-template = [
+template1 = [
 	{"l1" : "miss", "addr" : "a1", "remvd" : "x" },
 	{"l1" : "any", "addr" : "a2" },
 	{"l1" : "any", "addr" : "a3" },
@@ -276,6 +300,16 @@ template = [
 	{"l1" : "any", "addr" : "a3" },
 	{"l1" : "miss", "addr" : "a4", "remvd" : "x" },
 	{"l1" : "miss", "addr" : "a5", "remvd" : "x1"  }
+]
+
+template = [
+	{"l1" : "hit", "addr" : "a1" },
+	{"l1" : "hit", "addr" : "a2" },
+	{"l1" : "any", "addr" : "a6" },
+	{"l1" : "any", "addr" : "a7" },
+	{"l1" : "hit", "addr" : "a3" },
+	{"l1" : "hit", "addr" : "a4" },
+	{"l1" : "hit", "addr" : "a5" }
 ]
 
 # lru element is the last element of this seq
@@ -293,7 +327,8 @@ equals = [[i["addr"], i["addr"]] for i in template]
 #				["a2", "a3"], ["a3", "a4"]]
 
 not_equals = [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
-			["a2", "a3"], ["a2", "a4"], ["a3", "a4"]]
+			["a2", "a3"], ["a2", "a4"], ["a3", "a4"]
+		,["a1", "a5"],["a2", "a5"],["a3", "a5"],["a4", "a5"]]
 
 if not traverse_c(template, initial_l1, equals, not_equals ) :
 	print("template is unsatisfiable")
