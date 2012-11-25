@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+import random
+import time
+import sys
+
 def traverse_c(program, l1, equals, not_equals) :
 	for l in l1 :
 		assert isinstance(l, int)
@@ -26,14 +30,26 @@ def traverse_c(program, l1, equals, not_equals) :
                                            for j in range(k+1, len(nums))]
                 
 	
-	# try heuristics: 1
-	addrs = reachable_addresses(program, len(l0), equals, not_equals)
-	print("ADDRS = ", addrs)
-	for ads in addrs :
-		if has_clique(ads, equals, not_equals) :
+	# try heuristics: 1 (may infer some inequalities and add them to not_equals)
+	while True :
+		addrs = reachable_addresses(program, len(l0), equals, not_equals)
+		print("ADDRS = ", addrs)
+		if not sat(equals, not_equals) :
 			return False
+		for ads in addrs :
+			if len(cliques(ads, len(l1) + 1, equals, not_equals)) > 0 :
+				return False
+		print("NOT_EQUALS: ", not_equals)
+		if not sat(equals, not_equals) :
+			return False
+	
+		if not infer(addrs, equals, not_equals) :
+#			print("NOT INFER :(")
+			break
+	
 
 	# try heuristics: 2
+	print("heuristic 2")
 	eq = equals + equals_l0
 	neq = not_equals + not_equals_l0 + not_equals_nums
 	remvd_neqs(program, l1, eq, neq)  # equals and not_equals may be increased
@@ -42,6 +58,7 @@ def traverse_c(program, l1, equals, not_equals) :
 
 
         # minimize solution
+	print("TRYING TO MINIMIZE SOLUTION")
 	for i in range(len(l1)+1) :
 		l0 = []
 		for j in range(i) :
@@ -98,20 +115,20 @@ def traverse(program, l1, equals, not_equals):
 		print_model(equals, not_equals)
 		return True
 
-	print(" ")
-	print("left: ", len(program), "program elements")
-	print("cache:", l1)
+#	print(" ")
+#	print("left: ", len(program), "program elements")
+#	print("cache:", l1)
 
 	addr = program[0]["addr"];
 
 	if "l1" in program[0] :
 		if program[0]["l1"] == "miss" :
-			print("try miss(", addr, ")")
+#			print("try miss(", addr, ")")
 			neq = not_equals + [[addr, x] for x in l1]
 			eq = [[program[0]["remvd"],l1[-1]]] if "remvd" in program[0] else []
 			
-			if "remvd" in program[0] :
-				print("remvd: ", program[0]["remvd"], "=", l1[-1])
+#			if "remvd" in program[0] :
+#				print("remvd: ", program[0]["remvd"], "=", l1[-1])
 
 			if False and len(program) == 1 :
 				print("TRY SAT:")
@@ -133,7 +150,7 @@ def traverse(program, l1, equals, not_equals):
 			else :
 				for i in range(len(l1)) :
 					e = l1[i]
-					print("try hit: ", addr, "=", e)
+#					print("try hit: ", addr, "=", e)
 					if sat(equals + [[addr, e]], not_equals) :
 						if traverse(
 							program[1:],
@@ -141,8 +158,8 @@ def traverse(program, l1, equals, not_equals):
 							equals + [[addr, e]],
 							not_equals) :
 							return True
-					else :
-						print("unsat; try next or backtrack")
+#					else :
+#						print("unsat; try next or backtrack")
 
 		if program[0]["l1"] == "any" :
 			program[0]["l1"] = "miss"
@@ -153,7 +170,7 @@ def traverse(program, l1, equals, not_equals):
 				return True
 			program[0]["l1"] = "any"
 
-		print("backtrack")	
+#		print("backtrack")	
 		return False
 				
 	else :
@@ -292,45 +309,66 @@ def is_known(x, l, equals) :
 def reachable_addresses(program, w, equals, not_equals) :
 	result = []
 	addresses = []
-	print("START")
+#	print("START")
 	for i in range(len(program)) :
 		if program[i]["l1"] == "hit" :
 			addresses += [program[i]["addr"]]
 		elif program[i]["l1"] == "any" and is_known(program[i]["addr"], addresses, equals) :
 			pass
 		else :
-			print("PUSH: ", addresses)
+#			print("PUSH: ", addresses)
+			if program[i]["l1"] == "miss" :
+				not_equals += [[program[i]["addr"], a] for a in addresses]
 			result = result + [addresses] if len(addresses) > 0 else result
 			addresses = [program[j]["addr"] for j in range(max(0,i-w+1), max(0,i+1))]
-			print("ADDRESSES := ", addresses)
+#			print("ADDRESSES := ", addresses)
 			# TODO: add to "addresses" more addresses if has equals
 			# TODO: add "remvd"s to "addresses"
 	
-	result = result + [addresses] if len(addresses) > 0 else result
-	print("FINISH: ", result)
+	if len(addresses) > 0 :
+#		print("PUSH: ", addresses)
+		result += [addresses]
+#	print("FINISH: ", result)
 	return result
 
-def has_clique(addresses, equals, not_equals) :
+def cliques(addresses, size, equals, not_equals) :
+	if len(addresses) <= size :
+		return []
+
+	result = []
 	for i1 in range(len(addresses)) :
 		for i2 in range(i1+1, len(addresses)) :
-			if not always_different(addresses[i1], addresses[i2], equals, not_equals) :
+			if always_different(addresses[i1], addresses[i2], equals, not_equals) :
+				if size == 2 :
+					result += [[addresses[i1], addresses[i2]]]
+					continue
+			else:
 				continue
 			for i3 in range(i2+1, len(addresses)) :
-				if not always_different(addresses[i1], addresses[i2], equals, not_equals) or (
-				   not always_different(addresses[i3], addresses[i2], equals, not_equals) ):
+				if always_different(addresses[i1], addresses[i2], equals, not_equals) and (
+				    always_different(addresses[i3], addresses[i2], equals, not_equals) ) :
+					if size == 3 :
+						result += [[addresses[i1], addresses[i2], addresses[i3]]]
+						continue
+				else :
 					continue
 				for i4 in range(i3+1, len(addresses)) :		
-					if not always_different(addresses[i4], addresses[i1], equals, not_equals) or (
-					 not always_different(addresses[i4], addresses[i2], equals, not_equals) ) or (
-					 not always_different(addresses[i4], addresses[i3], equals, not_equals) ) :
+					if always_different(addresses[i4], addresses[i1], equals, not_equals) and (
+					  always_different(addresses[i4], addresses[i2], equals, not_equals) ) and (
+					  always_different(addresses[i4], addresses[i3], equals, not_equals) ) :
+						if size == 4 :
+							result += [[addresses[i1], addresses[i2], addresses[i3], addresses[i4]]]
+							continue
+					else :
 						continue
 					for i5 in range(i4+1, len(addresses)) :			
 						if always_different(addresses[i5], addresses[i1], equals, not_equals) and (
 						always_different(addresses[i5], addresses[i2], equals, not_equals) ) and (
 						always_different(addresses[i5], addresses[i3], equals, not_equals) ) and (
 						always_different(addresses[i5], addresses[i4], equals, not_equals) ) :
-							return True
-	return False
+							if size == 5 :
+								result += [[addresses[i1], addresses[i2], addresses[i3], addresses[i4], addresses[i5]]]
+	return result
 
 def always_different(x, y, equals, not_equals) :
 	for n_eq in not_equals :
@@ -339,83 +377,105 @@ def always_different(x, y, equals, not_equals) :
 			return True
 	return False
 
+###############################################
+
+def infer(addresses, equals, not_equals) :
+	result = False
+	for adrs in addresses :
+		for clique in cliques(adrs, 4, equals, not_equals) :
+#			print("clique: ", clique)
+			for a in [x for x in adrs if x not in clique] : # for a in (adrs - clique)
+				values = maybe_equal(clique, a, equals, not_equals)
+#				print("so ", a, "may be equal to ", values)
+				if values is not None and len(values) == 1 :
+					equals += [[values[0], a]]
+					print("INFER !!! ", values[0], " = ", a)
+					result = True
+#		else :
+#			print("no cliques :(")
+	return result
+
+def maybe_equal(addresses, addr, equals, not_equals) :
+	result = []
+	for a in addresses :
+		if not always_different(a, addr, equals, not_equals) :
+			result += [a]
+	return result
+
 #################################################
 
-template0 = [
-	{"l1" : "miss", "addr": "x", "remvd": "y" }, # 5 },
-	{"l1" : "hit", "addr" : 65},
-	{"l1": "hit", "addr" : "a1"},
-	{"l1" : "hit", "addr" : "a2"},
-	{"l1" : "hit", "addr" : "a3"},
-	{"l1" : "hit", "addr" : "a4" }
-	, {"l1" : "miss", "addr" : "y" } 
-]
+def run(length) :
+	template = []
+	for i in range(length) :
+		situation = ["hit", "miss", "any"][random.randrange(3)]
+		variable = "a" + str(random.randrange(length))
+		template += [{"l1" : situation, "addr" : variable}]
+
+	
+	equals = [[i["addr"], i["addr"]] for i in template]
+
+	not_equals = [["a" + str(i), "a" + str(j)] for i in range(1, 6) for j in range(i+1, 6)]
+
+	print("TEMPLATE: ")
+	for x in template:
+		print(x)
+	if not traverse_c(template, [1, 2, 3, 4], equals, not_equals) :
+		print("unsat")
+
+if len(sys.argv) > 1 :
+	while True :
+		start = time.time()
+		run(10)
+		duration = time.time() - start
+		print(duration)
+		if duration > 10 : exit(0)
+
+template1 = [{'addr': 'a2', 'l1': 'any'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'miss'},
+{'addr': 'a1', 'l1': 'hit'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a4', 'l1': 'hit'},
+{'addr': 'a4', 'l1': 'any'},
+{'addr': 'a7', 'l1': 'miss'} ]
+
+template1 = [ {'addr': 'a2', 'l1': 'hit'},
+{'addr': 'a8', 'l1': 'hit'},
+{'addr': 'a0', 'l1': 'any'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a9', 'l1': 'any'},
+{'addr': 'a2', 'l1': 'miss'},
+{'addr': 'a1', 'l1': 'miss'},
+{'addr': 'a8', 'l1': 'miss'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a0', 'l1': 'hit'} ]
 
 template1 = [
-	{"l1" : "miss", "addr" : "a1", "remvd" : "x" },
-	{"l1" : "any", "addr" : "a2" },
-	{"l1" : "any", "addr" : "a3" },
-	{"l1" : "any", "addr" : "a2" },
-	{"l1" : "any", "addr" : "a3" },
-	{"l1" : "any", "addr" : "a2" },
-	{"l1" : "any", "addr" : "a3" },
-	{"l1" : "miss", "addr" : "a4", "remvd" : "x" },
-	{"l1" : "miss", "addr" : "a5", "remvd" : "x"  }
-]
-
-template2 = [
-	{"l1" : "hit", "addr" : "a1" },
-	{"l1" : "hit", "addr" : "a2" },
-
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-
-	{"l1" : "hit", "addr" : "a3" },
-	{"l1" : "hit", "addr" : "a4" },
-	{"l1" : "hit", "addr" : "a5" }
+{'addr': 'a1', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'miss'},
+{'addr': 'a4', 'l1': 'any'},
+{'addr': 'a6', 'l1': 'miss'},
+{'addr': 'a6', 'l1': 'miss'},
+{'addr': 'a6', 'l1': 'hit'},
+{'addr': 'a1', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'miss'},
+{'addr': 'a0', 'l1': 'miss'},
+{'addr': 'a2', 'l1': 'any'}
 ]
 
 template = [
-	{"l1" : "hit", "addr" : "a1" },
-	{"l1" : "hit", "addr" : "a2" },
-
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-
-	{"l1" : "hit", "addr" : "a3" },
-
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-
-	{"l1" : "hit", "addr" : "a4" },
-
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-
-	{"l1" : "hit", "addr" : "a5" }
-]
-
-template3 = [
-	{"l1" : "hit", "addr" : "a5" },
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-	{"l1" : "hit", "addr" : "a1" },
-	{"l1" : "hit", "addr" : "a2" },
-	{"l1" : "hit", "addr" : "a3" },
-	{"l1" : "hit", "addr" : "a4" },
-	{"l1" : "miss", "addr" : "a5" }
-]
-
-template4 = [
-	{"l1" : "hit", "addr" : "a1" },
-	{"l1" : "hit", "addr" : "a2" },
-	{"l1" : "any", "addr" : "a6" },
-	{"l1" : "any", "addr" : "a7" },
-	{"l1" : "hit", "addr" : "a3" },
-	{"l1" : "hit", "addr" : "a4" },
-	{"l1" : "any", "addr" : "a8" },
-	{"l1" : "any", "addr" : "a9" },
-	{"l1" : "hit", "addr" : "a5" }
+{'addr': 'a8', 'l1': 'hit'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a1', 'l1': 'hit'},
+{'addr': 'a9', 'l1': 'hit'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a7', 'l1': 'any'},
+{'addr': 'a0', 'l1': 'miss'},
+{'addr': 'a3', 'l1': 'miss'}
 ]
 
 # lru element is the last element of this seq
@@ -438,4 +498,4 @@ not_equals = [["a1", "a2"], ["a1", "a3"], ["a1", "a4"],
 
 if not traverse_c(template, initial_l1, equals, not_equals ) :
 	print("template is unsatisfiable")
-	
+
