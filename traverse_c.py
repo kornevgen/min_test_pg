@@ -482,7 +482,9 @@ def infer_alldiffs(program, w, equals, not_equals) :  # returns (is_inferred : b
 
 			
 			if exists_path(program[i]["addr"], program[j]["addr"], equals) :
+				print("find hit --> miss: ", program[i]["addr"])
 				addresses = maybe_differents([program[k]["addr"] for k in range(j+1, i)], equals, not_equals)
+				print("addresses = ", addresses)
 				if len(addresses) < w :
 					not_equals += [[program[i]["addr"], program[i]["addr"]]]  # unsat
 					return True
@@ -492,10 +494,10 @@ def infer_alldiffs(program, w, equals, not_equals) :  # returns (is_inferred : b
 						return True
 					else :
 						program[i-1]["l1"] = "miss"
-						for i1 in range(len(addresses + [program[j]["addr"]])) :
-							for i2 in range(i1+1, len(addresses + [program[j]["addr"]])) :
-								a1 = program[i1]["addr"]
-								a2 = program[i2]["addr"]
+						for i1 in range(len(addresses)) :
+							for i2 in range(i1+1, len(addresses)) :
+								a1 = addresses[i1]
+								a2 = addresses[i2]
 								if ([a1, a2] not in not_equals) and ([a2, a1] not in not_equals) :
 									not_equals += [[a1, a2]]
 									inferred = True
@@ -761,6 +763,19 @@ template4 = [
 {'addr': 'a5', 'l1': 'hit'},
 {'addr': 'a6', 'l1': 'miss'}
 ] # sat  # loop
+
+template = [
+{'addr': 'a0', 'l1': 'hit'},
+{'addr': 'a8', 'l1': 'any'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'hit'},
+{'addr': 'a9', 'l1': 'any'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a0', 'l1': 'hit'},
+{'addr': 'a4', 'l1': 'miss'},
+{'addr': 'a6', 'l1': 'miss'},
+{'addr': 'a5', 'l1': 'miss'}
+] # unsat
 
 # lru element is the last element of this seq
 initial_l1 = [1, 2, 3, 4]
