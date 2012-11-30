@@ -342,6 +342,7 @@ def reachable_addresses(program, w, equals, not_equals) :
 	addresses = []
 #	print("START")
 	for i in range(len(program)) :
+#		print("i = ", i)
 		if program[i]["l1"] == "hit" :
 			if not is_known(program[i]["addr"], addresses, equals):
 				addresses += [program[i]["addr"]]
@@ -349,17 +350,29 @@ def reachable_addresses(program, w, equals, not_equals) :
 			program[i]["l1"] = "hit"
 		else :
 #			print("PUSH: ", addresses)
+			addr = program[i]["addr"]
 			if program[i]["l1"] == "miss" :
-				addr = program[i]["addr"]
 				for a in addresses :
 					if ([addr, a] not in not_equals) and ([a, addr] not in not_equals) :
 						not_equals += [[a, addr]]
+			if not sat(equals, not_equals) :
+				return []
+#			print("1.1")
 			for j in range(i+1, len(program)) :
 				if program[j]["l1"] != "hit" : break
-				if always_different(program[j]["addr"], program[i]["addr"], equals, not_equals) :
-					if not is_known(program[j]["addr"], addresses, equals) :
-						addresses += [program[j]["addr"]]
+				a = program[j]["addr"]
+#				print("1.1.1")
+#				print("equals: ", equals)
+#				print("not_equals: ", not_equals)
+				if always_different(a, addr, equals, not_equals) :
+#					print("1.1.2")
+					if not is_known(a, addresses, equals) :
+#						print("1.1.3")
+						addresses += [a]
+						if ([addr, a] not in not_equals) and ([a, addr] not in not_equals) :
+						 	not_equals += [[a, addr]]
 
+#			print("1.2")
 			if len(addresses) > 0 :
 				result += [addresses]
 			
@@ -554,25 +567,36 @@ if len(sys.argv) > 1 :
 	sat_max = 0
 
 	count = 0
+	unsats = 0
+	sats = 0
+	sum_unsats = 0
+	sum_sats = 0
 
 	while True :
 		start = time.time()
 		c = run(10)
-		duration = time.time() - start
+		stop = time.time()
+		duration = stop - start
 		print(duration)
 
 		if c :
 			sat_min = min(sat_min, duration)
 			sat_max = max(sat_max, duration)
+			sum_sats += duration
+			sats += 1
 		else :
 			unsat_min = min(unsat_min, duration)
 			unsat_max = max(unsat_max, duration)
+			sum_unsats += duration
+			unsats += 1
 
 		if count == 10 :
 			count = 0
 			print("================================")
-			print("SAT : ", sat_min, "..", sat_max)
+			print("  SAT : ", sat_min, "..", sat_max)
+			print("		average = ", 0 if sats == 0 else sum_sats / sats)
 			print("UNSAT : ", unsat_min, "..", unsat_max)
+			print("		average = ", 0 if unsats == 0 else sum_unsats / unsats)
 			print("================================")
 		else :
 			count += 1
@@ -829,7 +853,7 @@ template2 = [
 {'addr': 'a7', 'l1': 'any'}
 ] # unsat
 
-template = [
+template3 = [
 {'addr': 'a6', 'l1': 'hit'},
 {'addr': 'a1', 'l1': 'hit'},
 {'addr': 'a6', 'l1': 'any'},
@@ -841,6 +865,32 @@ template = [
 {'addr': 'a6', 'l1': 'any'},
 {'addr': 'a0', 'l1': 'hit'}
 ] # sat
+
+template2 = [
+{'addr': 'a0', 'l1': 'miss'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'hit'},
+{'addr': 'a3', 'l1': 'miss'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a7', 'l1': 'miss'},
+{'addr': 'a3', 'l1': 'hit'},
+{'addr': 'a2', 'l1': 'miss'}
+] # unsat
+
+template = [
+{'addr': 'a2', 'l1': 'miss'},
+{'addr': 'a2', 'l1': 'hit'},
+{'addr': 'a2', 'l1': 'hit'},
+{'addr': 'a7', 'l1': 'miss'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a2', 'l1': 'miss'},
+{'addr': 'a2', 'l1': 'hit'},
+{'addr': 'a2', 'l1': 'any'},
+{'addr': 'a6', 'l1': 'hit'},
+{'addr': 'a5', 'l1': 'miss'}
+] # unsat
 
 # lru element is the last element of this seq
 initial_l1 = [1, 2, 3, 4]
