@@ -78,7 +78,11 @@ def traverse_c(program, l1, equals, not_equals) :
 	eq = equals + equals_l0
 	neq = not_equals + not_equals_l0 + not_equals_nums
 	remvd_neqs(program, l1, eq, neq)  # equals and not_equals may be increased
-	if not sat(eq, neq) or not traverse(program, l0, eq, neq) :
+	if not sat(eq, neq) :
+		return False
+	
+	print("backtracking")
+	if not traverse(program, l0, eq, neq) :
 		return False
 
 
@@ -351,7 +355,7 @@ def reachable_addresses(program, w, equals, not_equals) :
 			for j in range(i+1, len(program)) :
 				if program[j]["l1"] != "hit" : break
 				if always_different(program[j]["addr"], program[i]["addr"], equals, not_equals) and (
-					program[j]["addr"] not in addresses ) :
+					not is_known(program[j]["addr"], addresses, equals) ) :
 					addresses += [program[j]["addr"]]
 
 			if len(addresses) > 0 :
@@ -614,7 +618,7 @@ template1 = [
 {'addr': 'a2', 'l1': 'any'}
 ]  # sat
 
-template2222 = [
+template = [
 {'addr': 'a9', 'l1': 'hit'},
 {'addr': 'a3', 'l1': 'any'},
 {'addr': 'a8', 'l1': 'any'},
@@ -732,7 +736,7 @@ template3 = [
 {'addr': 'a1', 'l1': 'any'}
 ] # sat
 
-template = [
+template2 = [
 {'addr': 'a2' , 'l1': 'any'},
 {'addr': 'a3' , 'l1': 'any'},
 {'addr': 'a7' , 'l1': 'miss'},
@@ -744,6 +748,19 @@ template = [
 {'addr': 'a7' , 'l1': 'miss'},
 {'addr': 'a6' , 'l1': 'any'}
 ] # unsat
+
+template4 = [
+{'addr': 'a5', 'l1': 'miss'},
+{'addr': 'a7', 'l1': 'any'},
+{'addr': 'a4', 'l1': 'miss'},
+{'addr': 'a1', 'l1': 'miss'},
+{'addr': 'a0', 'l1': 'miss'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a7', 'l1': 'any'},
+{'addr': 'a2', 'l1': 'any'},
+{'addr': 'a5', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'miss'}
+] # sat  # loop
 
 # lru element is the last element of this seq
 initial_l1 = [1, 2, 3, 4]
