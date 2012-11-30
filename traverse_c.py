@@ -346,7 +346,7 @@ def reachable_addresses(program, w, equals, not_equals) :
 			if not is_known(program[i]["addr"], addresses, equals):
 				addresses += [program[i]["addr"]]
 		elif program[i]["l1"] == "any" and is_known(program[i]["addr"], addresses, equals) :
-			pass
+			program[i]["l1"] = "hit"
 		else :
 #			print("PUSH: ", addresses)
 			if program[i]["l1"] == "miss" :
@@ -547,16 +547,40 @@ def run(length) :
 
 
 if len(sys.argv) > 1 :
-	b = sys.argv[1]
+	
+	unsat_min = 1000
+	unsat_max = 0
+	sat_min = 1000
+	sat_max = 0
+
+	count = 0
+
 	while True :
 		start = time.time()
 		c = run(10)
 		duration = time.time() - start
 		print(duration)
+
+		if c :
+			sat_min = min(sat_min, duration)
+			sat_max = max(sat_max, duration)
+		else :
+			unsat_min = min(unsat_min, duration)
+			unsat_max = max(unsat_max, duration)
+
+		if count == 10 :
+			count = 0
+			print("================================")
+			print("SAT : ", sat_min, "..", sat_max)
+			print("UNSAT : ", unsat_min, "..", unsat_max)
+			print("================================")
+		else :
+			count += 1
+
 		if duration > 10 :
-			if b == "unsat" :
+			if sys.argv[1] == "unsat" :
 				if not c : exit(0)
-			elif b == "sat" :
+			elif sys.argv[1] == "sat" :
 				if c : exit(0)
 			else :
 				exit(0)
@@ -779,7 +803,7 @@ template2 = [
 {'addr': 'a5', 'l1': 'miss'}
 ] # unsat
 
-template = [
+template2 = [
 {'addr': 'a8', 'l1': 'hit'},
 {'addr': 'a8', 'l1': 'hit'},
 {'addr': 'a8', 'l1': 'miss'},
@@ -791,6 +815,32 @@ template = [
 {'addr': 'a6', 'l1': 'any'},
 {'addr': 'a8', 'l1': 'miss'}
 ] # unsat
+
+template2 = [
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'hit'},
+{'addr': 'a3', 'l1': 'hit'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'any'},
+{'addr': 'a8', 'l1': 'miss'},
+{'addr': 'a8', 'l1': 'any'},
+{'addr': 'a3', 'l1': 'miss'},
+{'addr': 'a3', 'l1': 'hit'},
+{'addr': 'a7', 'l1': 'any'}
+] # unsat
+
+template = [
+{'addr': 'a6', 'l1': 'hit'},
+{'addr': 'a1', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'any'},
+{'addr': 'a6', 'l1': 'any'},
+{'addr': 'a1', 'l1': 'any'},
+{'addr': 'a6', 'l1': 'any'},
+{'addr': 'a4', 'l1': 'any'},
+{'addr': 'a6', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'any'},
+{'addr': 'a0', 'l1': 'hit'}
+] # sat
 
 # lru element is the last element of this seq
 initial_l1 = [1, 2, 3, 4]
