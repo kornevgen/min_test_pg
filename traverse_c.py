@@ -328,6 +328,8 @@ def remvd_neqs(program, l1, equals, not_equals) :
 													
 
 def is_known(x, l, equals) :
+	if x in l : return True
+
 	for i in l :
 		if exists_path(x, i, equals) :
 			return True
@@ -354,9 +356,9 @@ def reachable_addresses(program, w, equals, not_equals) :
 						not_equals += [[a, addr]]
 			for j in range(i+1, len(program)) :
 				if program[j]["l1"] != "hit" : break
-				if always_different(program[j]["addr"], program[i]["addr"], equals, not_equals) and (
-					not is_known(program[j]["addr"], addresses, equals) ) :
-					addresses += [program[j]["addr"]]
+				if always_different(program[j]["addr"], program[i]["addr"], equals, not_equals) :
+					if not is_known(program[j]["addr"], addresses, equals) :
+						addresses += [program[j]["addr"]]
 
 			if len(addresses) > 0 :
 				result += [addresses]
@@ -764,7 +766,7 @@ template4 = [
 {'addr': 'a6', 'l1': 'miss'}
 ] # sat  # loop
 
-template = [
+template2 = [
 {'addr': 'a0', 'l1': 'hit'},
 {'addr': 'a8', 'l1': 'any'},
 {'addr': 'a7', 'l1': 'hit'},
@@ -777,10 +779,25 @@ template = [
 {'addr': 'a5', 'l1': 'miss'}
 ] # unsat
 
+template = [
+{'addr': 'a8', 'l1': 'hit'},
+{'addr': 'a8', 'l1': 'hit'},
+{'addr': 'a8', 'l1': 'miss'},
+{'addr': 'a7', 'l1': 'hit'},
+{'addr': 'a7', 'l1': 'miss'},
+{'addr': 'a8', 'l1': 'hit'},
+{'addr': 'a8', 'l1': 'miss'},
+{'addr': 'a2', 'l1': 'hit'},
+{'addr': 'a6', 'l1': 'any'},
+{'addr': 'a8', 'l1': 'miss'}
+] # unsat
+
 # lru element is the last element of this seq
 initial_l1 = [1, 2, 3, 4]
 
-equals = [[i["addr"], i["addr"]] for i in template]
+equals = []
+for i in template :
+	if [i["addr"], i["addr"]] not in equals : equals += [[i["addr"],i["addr"]]]
 
 # alldiffs_l1 = [ [initial_l1[i], initial_l1[j]]
 #			for i in range(len(initial_l1))
